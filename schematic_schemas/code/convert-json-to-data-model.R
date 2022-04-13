@@ -5,13 +5,13 @@ library(tidyr)
 library(dplyr)
 library(readr)
 
-assay_schema <- list.files("~/work/sysbioDCCjsonschemas/schema_metadata_templates/shared",
+assay_schema <- list.files("~/Desktop/sage-repos/forks/sysbioDCCjsonschemas/schema_metadata_templates/shared",
                          full.names = TRUE)
 
-ad_schema <- list.files("~/work/sysbioDCCjsonschemas/schema_metadata_templates/AD",
+ad_schema <- list.files("~/Desktop/sage-repos/forks/sysbioDCCjsonschemas/schema_metadata_templates/AD",
                       full.names = TRUE)
 
-syn_schema <- list.files("~/work/synapseAnnotations/terms",
+syn_schema <- list.files("~/Desktop/sage-repos/originals/synapseAnnotations/terms",
                          full.names = TRUE, recursive = TRUE)
 
 parse_ad_schema <- function(x, Parent = NA_character_) {
@@ -63,5 +63,17 @@ data_model <- data_model %>% mutate(
                         TRUE ~ DependsOn)
 )
 
-write_csv(data_model, "../amp.ad.data.model.csv", na = "")
+# Remove dataProperty values that do not appear in any AD templates
 
+template_dependencies <- data_model %>% 
+  filter(!is.na(DependsOn)) %>% 
+  mutate(DependsOn = stringr::str_split(DependsOn, ", ")) %>% 
+  select(DependsOn)
+  flatten() %>% 
+  unlist() %>% 
+  unique()
+
+relevant_data_model <- data_model %>% 
+  filter(Parent == "DataType" | Attribute %in% template_dependencies) 
+
+write_csv(relevant_data_model, here::here("schematic_schemas/lightweight_ad_data_model.csv"), na = "")
